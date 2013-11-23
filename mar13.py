@@ -10,35 +10,56 @@ from hmc5883l import hmc5883l
 import sys
 import os
 
-# set logging
-fname = 'mar13_' + str(int(time.time())) + '.csv'
-f = open(fname,'w')
+# -----------------------------------------
+# ----- begin declare variables 
+# -----------------------------------------
 
-# connect to GPS
+# logfile name
+logfile = 'log.csv'
+
+# GPS serial port
 serialport = serial.Serial("/dev/gps0", 115200)
+
+# xbee serial port
+xbee = serial.Serial("/dev/gps0", 9600)
+
+# compass adjustment
+cAdjust = -10
+
+# GPIO pins
+#goButton = 17
+#readyLED = 18
+steering = 24
+#throttle = 23
+
+# waypoints
+wps = []
+wps.append([41.024353,-73.762033]) # waypoint 1 
+wps.append([41.024005,-73.761872]) # waypoint 2
+wps.append([41.023954,-73.762109]) # ..
+wps.append([41.024314,-73.762242]) # .
+
+# GPS accuracy * 2
+GPSaccuracy = 10
+
+# -----------------------------------------
+# ----- end declare variables 
+# -----------------------------------------
+
+#GPIO.setmode(GPIO.BCM)
+#GPIO.setup(readyLED,GPIO.OUT)
+#GPIO.setup(goButton,GPIO.IN)
 
 # setup compass
 compass = hmc5883l(gauss = 4.7, declination = (-13,25))
 
-# init button and ready LED
-#button = 17
-#startLED = 18
-#GPIO.setmode(GPIO.BCM)
-#GPIO.setup(startLED,GPIO.OUT)
-#GPIO.setup(button,GPIO.IN)
+# open logfile
+f = open(logfile,'a')
 
-# init steering
-steering = 24
+# init steering / throttle
 servo = PWM.Servo(pulse_incr_us=1)
 servo.set_servo(steering,1500)
-
-# define waypoints list and set current
-wps = [[41.024353,-73.762033],[41.024005,-73.761872],[41.023954,-73.762109],[41.024314,-73.762242]]
-wpn = 0 
-
-def getWaypoint(n):
-    wp = wps[n]
-    return (float(wp[0]),float(wp[1]))
+#servo.set_servo(throttle,1500)
 
 def blinkLED(n):
     # blink LED on/off n number of times
@@ -60,7 +81,7 @@ def getDegrees(dms,nw):
     #S = float(dms[5:])
     DD = D + float(M)/60 #+ float(S)/3600
     if (nw == "S" or nw == "W"): DD *= -1
-    return DD
+    return float(DD)
 
 def getLocation():
     # read serial port and parse out GPS lat/long/compass/heading info
@@ -107,81 +128,72 @@ def getDistance(lat1, long1, lat2, long2):
 def changeDirection(course):
     # change rc steering to match course angle
     steerAng = (round(course / 3.5) * 50) + 1500
-    the_stdout, the_stderr = sys.stdout, sys.stderr
-    sys.stdout = sys.stderr = open(os.devnull,"w")
     servo.set_servo(steering,steerAng)
-    sys.stdout, sys.stderr = the_stdout, the_stderr
 
 def main():
     #while True:
-        #if (GPIO.input(button)):
-            #blinkLED(3)
-            global wpn
-            wpLat, wpLong = getWaypoint(wpn)
+        #if (GPIO.input(goButton)):
+            # get ready
+            #blinkLED(readyLED)
+            # go
+            #servo.set_servo(throttle,1600)
             
-            ltime = 0
+            # set loop count
+            n = 0
             
-            while True:
-                #print ('--Begin Loop--')
-                btime = int(round(time.time() * 1000))
+            for wp in wps:
+                wpLat = float(wp[0])
+                wpLong = float(wp[1])
+                distance = GPSaccuracy
+                while distance >= GPSaccuracy:      
+                    start = int(round(time.time() * 1000))
+                    GPS = getLocation()
+                    myLat = GPS[0]
+                    myLong = GPS[2]
+                    bearing = getBearing(myLat,myLong,wpLat,wpLong)
+                    heading = compass.heading() + cAdjust
+
+                    course = bearing - heading
+                    if (course >= 180):
+                        course -= 360;
+                    if (course <= -180):
+                        course +=360
+                    # correct for max turn capability
+                    if (course > 35):
+                        course = 35
+                    if (course < -35):
+                        course = -35
+
+                    changeDirection(course)
+
+                    # -----------------------
+                    # --- output to xbee 
+                    # -----------------------
+                    output = str(n) + ' || ' + str(myLat) + ' || ' + str(myLong) + ' || ' + \
+                    str(wpn) + ' || ' + str(bearing) + ' || ' + str(distance) + ' || ' + \
+                    str(heading) + ' || ' + str(course) + ' || ' + str(lduration) + '\r'
                 
-                GPS = getLocation()
-                myLat = float(GPS[0])
-                myLong = float(GPS[2])
-                distance = getDistance(myLat,myLong,wpLat,wpLong)
-                # check if we are close to waypoint (GPS accuracy is 8.2')	
-                if (distance <= 8.5):
-                    wpn = 0 if wpn + 1 > wps.len() else wpn + 1
-                    wpLat, wpLong = getWaypoint(wpn)
+                    xbee.write(output)
+
+                    # -----------------------
+                    # ---- output to log 
+                    # -----------------------
+                    end = int(round(time.time() * 1000))
+                    lduration = (end - start)
+                
+                    output = str(n) + ',' + str(myLat) + ',' + str(myLong) + ',' + \
+                    str(wpn) + ',' + str(bearing) + ',' + str(distance) + ',' + \
+                    str(heading) + ',' + str(course) + ',' + str(lduration) + '\n'
+               
+                    f.write(output)
+                    n += 1
                     distance = getDistance(myLat,myLong,wpLat,wpLong)
-                	
-                bearing = getBearing(myLat,myLong,wpLat,wpLong)
-                #heading = float(GPS[4])
-                heading = compass.heading() - 10
-                
-                course = bearing - heading
-                #course = 0 - heading
-                if (course >= 180):
-                    course -= 360;
-                if (course <= -180):
-                    course +=360
-                # correct for max turn capability
-                if (course > 35):
-                    course = 35
-                if (course < -35):
-                    course = -35
-
-                changeDirection(course)
-
-                # output to screen
-                sout = 'Lat: ' + str(myLat) + " || "
-                sout = sout + 'Long: ' + str(myLong) + " || "
-                sout = sout + 'Waypoint: ' + str(wpn) + " || "
-                sout = sout + 'Bearing: ' + str(bearing) + " || "
-                sout = sout + 'Distance: ' + str(distance) + " || "
-                sout = sout + 'Heading: ' + str(heading) + " || "
-                sout = sout + 'Course: ' + str(course)
-                sys.stdout.write("\r" + sout)
-                sys.stdout.flush()
-
-                #print ('Steering: ' + str(steerAng))
-                # output to log
-                etime = int(round(time.time() * 1000))
-                ltime += (etime - btime)
-                output = str(ltime) + ','
-                output = output + str(myLat) + ','
-                output = output + str(myLong) + ','
-                output = output + str(wpn) + ','
-                output = output + str(bearing) + ','
-                output = output + str(distance) + ','
-                output = output + str(heading) + ','
-                output = output + str(course) + ','
-                #output = output + str(steerAng)
-                output = output + '\n'
-                f.write(output)
-                #time.sleep(0.25)
-                #n += 1
-                #print ('--End Loop--\n\n')
+                    
+            f.close()
+            # stop 
+            #servo.set_servo(throttle,1500)
+            
+                             
                 
 if __name__=="__main__":
 	main()
