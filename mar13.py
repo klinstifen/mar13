@@ -138,6 +138,9 @@ def main():
             # go
             #servo.set_servo(throttle,1600)
             
+            # time of run
+            tor = str(time.strftime("%d%m%Y")) + str(time.strftime("%H%M%S"))
+            
             # set loop count
             n = 0
             
@@ -180,8 +183,10 @@ def main():
                     # -----------------------
                     end = int(round(time.time() * 1000))
                     lduration = (end - start)
-                
-                    output = str(n) + ',' + str(myLat) + ',' + str(myLong) + ',' + \
+                    
+                    # ---- header
+                    # tor,loop,lat,long,waypoint,bearing,distance,heading,course,loop duration
+                    output = str(tor), str(n) + ',' + str(myLat) + ',' + str(myLong) + ',' + \
                     str(wpn) + ',' + str(bearing) + ',' + str(distance) + ',' + \
                     str(heading) + ',' + str(course) + ',' + str(lduration) + '\n'
                
