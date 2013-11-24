@@ -1,11 +1,9 @@
 mar13
 =====
 
-mar13 is an autonomous unmanned ground vehicle to be entered in [Sparkfun's AVC 2014 ](https://avc.sparkfun.com).
+An autonomous unmanned ground vehicle to be entered in [Sparkfun's AVC 2014 ](https://avc.sparkfun.com) driven by a [RaspberryPi](http://www.raspberrypi.org/faqs).
 
-mar13 will be driven by a [RaspberryPI](http://www.raspberrypi.org/faqs) running a Python script.
-
-The Python script (mar13.py) will read data from a variety of sensors including: GPS, magnetometer, proximity sensors, etc. 
+A Python script running on the RPi will read data from a variety of sensors including: GPS, magnetometer, proximity sensors, etc. and then control both the steering and acceleration of the vehicle.
 
 #### Dependecies
 
