@@ -27,8 +27,8 @@ xbee = serial.Serial("/dev/gps0", 9600)
 cAdjust = -10
 
 # GPIO pins
-#goButton = 17
-#readyLED = 18
+goButton = 17
+readyLED = 18
 steering = 24
 #throttle = 23
 
@@ -46,9 +46,9 @@ GPSaccuracy = 10
 # ----- end declare variables 
 # -----------------------------------------
 
-#GPIO.setmode(GPIO.BCM)
-#GPIO.setup(readyLED,GPIO.OUT)
-#GPIO.setup(goButton,GPIO.IN)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(readyLED,GPIO.OUT)
+GPIO.setup(goButton,GPIO.IN)
 
 # setup compass
 compass = hmc5883l(gauss = 4.7, declination = (-13,25))
@@ -65,10 +65,10 @@ def blinkLED(n):
     # blink LED on/off n number of times
     # LED is on/off for 0.5/0.2 seconds
     i = 0
-    while i < n:
-        GPIO.output(startLED,1)
+    while i <= n:
+        GPIO.output(readyLED,1)
         time.sleep(0.5)
-        GPIO.output(startLED,0)
+        GPIO.output(readyLED,0)
         time.sleep(0.2)
         i += 1
     
@@ -131,10 +131,11 @@ def changeDirection(course):
     servo.set_servo(steering,steerAng)
 
 def main():
-    #while True:
-        #if (GPIO.input(goButton)):
+    GPIO.output(readyLED,1)
+    while True:
+        if (GPIO.input(goButton)):
             # get ready
-            #blinkLED(readyLED)
+            blinkLED(3)
             # go
             #servo.set_servo(throttle,1600)
             
