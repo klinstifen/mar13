@@ -14,30 +14,26 @@ import os
 # ----- begin declare variables 
 # -----------------------------------------
 
-# logfile name
+# log filename
 logfile = 'log.csv'
+
+# waypoint filename
+wpfile = "waypoints.txt"
 
 # GPS serial port
 serialport = serial.Serial("/dev/gps0", 115200)
 
 # xbee serial port
-xbee = serial.Serial("/dev/gps0", 9600)
+#xbee = serial.Serial("/dev/gps0", 9600)
 
 # compass adjustment
-cAdjust = -10
+cAdjust = +2
 
 # GPIO pins
 goButton = 17
 readyLED = 18
 steering = 24
 #throttle = 23
-
-# waypoints
-wps = []
-wps.append([41.024353,-73.762033]) # waypoint 1 
-wps.append([41.024005,-73.761872]) # waypoint 2
-wps.append([41.023954,-73.762109]) # ..
-wps.append([41.024314,-73.762242]) # .
 
 # GPS accuracy * 2
 GPSaccuracy = 10
@@ -51,7 +47,15 @@ GPIO.setup(readyLED,GPIO.OUT)
 GPIO.setup(goButton,GPIO.IN)
 
 # setup compass
-compass = hmc5883l(gauss = 4.7, declination = (-13,25))
+#mydec = -13,25
+compass = hmc5883l(gauss = 4.7, declination = (-7,13))
+
+# read in waypoints
+wps = []
+wplist = open(wpfile,r)
+for line in wplist:
+    wps.append([line])
+wplist.close()
 
 # open logfile
 f = open(logfile,'a')
@@ -169,26 +173,26 @@ def main():
                         course = -35
 
                     changeDirection(course)
-
-                    # -----------------------
-                    # --- output to xbee 
-                    # -----------------------
-                    output = str(n) + ' || ' + str(myLat) + ' || ' + str(myLong) + ' || ' + \
-                    str(wpn) + ' || ' + str(bearing) + ' || ' + str(distance) + ' || ' + \
-                    str(heading) + ' || ' + str(course) + ' || ' + str(lduration) + '\r'
-                
-                    xbee.write(output)
-
+                    
                     # -----------------------
                     # ---- output to log 
                     # -----------------------
                     end = int(round(time.time() * 1000))
                     lduration = (end - start)
+
+                    # -----------------------
+                    # --- output to xbee 
+                    # -----------------------
+                    output = str(n) + ' || ' + str(myLat) + ' || ' + str(myLong) + ' || ' + \
+                    str(wp) + ' || ' + str(bearing) + ' || ' + str(distance) + ' || ' + \
+                    str(heading) + ' || ' + str(course) + ' || ' + str(lduration) + '\r'
+                
+                    #xbee.write(output)                   
                     
                     # ---- header
                     # tor,loop,lat,long,waypoint,bearing,distance,heading,course,loop duration
                     output = str(tor), str(n) + ',' + str(myLat) + ',' + str(myLong) + ',' + \
-                    str(wpn) + ',' + str(bearing) + ',' + str(distance) + ',' + \
+                    str(wp) + ',' + str(bearing) + ',' + str(distance) + ',' + \
                     str(heading) + ',' + str(course) + ',' + str(lduration) + '\n'
                
                     f.write(output)
