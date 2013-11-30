@@ -52,9 +52,10 @@ compass = hmc5883l(gauss = 4.7, declination = (-7,13))
 
 # read in waypoints
 wps = []
-wplist = open(wpfile,r)
+wplist = open(wpfile,'r')
 for line in wplist:
-    wps.append([line])
+    coord = line.split(",")
+    wps.append([float(coord[0]),float(coord[1])])
 wplist.close()
 
 # open logfile
@@ -150,8 +151,8 @@ def main():
             n = 0
             
             for wp in wps:
-                wpLat = float(wp[0])
-                wpLong = float(wp[1])
+                wpLat = wp[0]
+                wpLong = wp[1]
                 distance = GPSaccuracy
                 while distance >= GPSaccuracy:      
                     start = int(round(time.time() * 1000))
@@ -159,10 +160,10 @@ def main():
                     myLat = GPS[0]
                     myLong = GPS[2]
                     bearing = getBearing(myLat,myLong,wpLat,wpLong)
-                                        
                     heading = compass.heading() + cAdjust
+                    course = bearing - heading
                     
-                    while (course = bearing - heading) > 0:
+                    while course > 0:
                         if (course >= 180):
                             course -= 360
                         if (course <= -180):
@@ -175,6 +176,7 @@ def main():
 
                         changeDirection(course)
                         heading = compass.heading() + cAdjust
+                        course = bearing - heading
                     
                     # -----------------------
                     # ---- output to log 
