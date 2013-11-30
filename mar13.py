@@ -159,20 +159,22 @@ def main():
                     myLat = GPS[0]
                     myLong = GPS[2]
                     bearing = getBearing(myLat,myLong,wpLat,wpLong)
+                                        
                     heading = compass.heading() + cAdjust
+                    
+                    while (course = bearing - heading) > 0:
+                        if (course >= 180):
+                            course -= 360
+                        if (course <= -180):
+                            course +=360
+                        # correct for max turn capability
+                        if (course > 35):
+                            course = 35
+                        if (course < -35):
+                            course = -35
 
-                    course = bearing - heading
-                    if (course >= 180):
-                        course -= 360;
-                    if (course <= -180):
-                        course +=360
-                    # correct for max turn capability
-                    if (course > 35):
-                        course = 35
-                    if (course < -35):
-                        course = -35
-
-                    changeDirection(course)
+                        changeDirection(course)
+                        heading = compass.heading() + cAdjust
                     
                     # -----------------------
                     # ---- output to log 
